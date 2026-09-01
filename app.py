@@ -3,10 +3,9 @@ import pandas as pd
 from datetime import datetime
 from io import BytesIO
 
-
-# =========================================================
-# 1. CẤU HÌNH
-# =========================================================
+# ==============================
+# CẤU HÌNH
+# ==============================
 
 st.set_page_config(
     page_title="SmartBank CRM",
@@ -14,349 +13,171 @@ st.set_page_config(
     layout="wide"
 )
 
-
-# =========================================================
-# 2. SESSION DATA
-# =========================================================
+# ==============================
+# SESSION
+# ==============================
 
 if "customers" not in st.session_state:
     st.session_state.customers = []
 
-if "admin" not in st.session_state:
-    st.session_state.admin = False
+# ==============================
+# HÀM ĐỊNH DẠNG TIỀN
+# ==============================
+
+def tien_vnd(so_tien):
+    return f"{int(so_tien):,}".replace(",", ".") + " VNĐ"
 
 
-# =========================================================
-# 3. HÀM FORMAT TIỀN
-# =========================================================
+# ==============================
+# HÀM CHẤM ĐIỂM
+# ==============================
 
-def format_money(value):
-    try:
-        value = int(value)
-        return f"{value:,}".replace(",", ".") + " VNĐ"
-    except:
-        return "0 VNĐ"
+def cham_diem(thu_nhap, san_pham, nhu_cau):
 
+    diem = 0
 
-# =========================================================
-# 4. HÀM CHẤM ĐIỂM KHÁCH HÀNG
-# =========================================================
-
-def calculate_score(income, product, amount, urgency):
-
-    score = 0
-
-    # Thu nhập
-    if income >= 50_000_000:
-        score += 30
-    elif income >= 30_000_000:
-        score += 25
-    elif income >= 15_000_000:
-        score += 20
+    if thu_nhap >= 50_000_000:
+        diem += 40
+    elif thu_nhap >= 30_000_000:
+        diem += 30
+    elif thu_nhap >= 15_000_000:
+        diem += 20
     else:
-        score += 10
+        diem += 10
 
-    # Sản phẩm
-    if product in ["Vay mua nhà", "Vay kinh doanh"]:
-        score += 25
-    elif product in ["Vay mua ô tô", "Thẻ tín dụng"]:
-        score += 20
-    elif product == "Gửi tiết kiệm":
-        score += 15
+    if san_pham in ["Vay mua nhà", "Vay kinh doanh"]:
+        diem += 30
+    elif san_pham in ["Vay mua ô tô", "Thẻ tín dụng"]:
+        diem += 25
     else:
-        score += 10
+        diem += 15
 
-    # Giá trị nhu cầu
-    if amount >= 2_000_000_000:
-        score += 25
-    elif amount >= 1_000_000_000:
-        score += 20
-    elif amount >= 500_000_000:
-        score += 15
+    if nhu_cau >= 2_000_000_000:
+        diem += 30
+    elif nhu_cau >= 1_000_000_000:
+        diem += 25
+    elif nhu_cau >= 500_000_000:
+        diem += 20
     else:
-        score += 10
+        diem += 10
 
-    # Mức độ cấp thiết
-    if urgency == "Trong 1 tháng":
-        score += 20
-    elif urgency == "1 - 3 tháng":
-        score += 15
-    elif urgency == "3 - 6 tháng":
-        score += 10
+    if diem >= 80:
+        xep_loai = "HOT"
+    elif diem >= 50:
+        xep_loai = "WARM"
     else:
-        score += 5
+        xep_loai = "COLD"
 
-    if score >= 80:
-        level = "HOT"
-    elif score >= 50:
-        level = "WARM"
-    else:
-        level = "COLD"
-
-    return score, level
+    return diem, xep_loai
 
 
-# =========================================================
-# 5. CSS GIAO DIỆN
-# =========================================================
+# ==============================
+# GIAO DIỆN
+# ==============================
 
 st.markdown(
     """
     <style>
-
-    /* ===== TOÀN BỘ APP ===== */
-
     .stApp {
-        background-color: #F5F7FA;
+        background-color: #F4F6F9;
     }
 
-    /* ===== SIDEBAR ===== */
-
-    section[data-testid="stSidebar"] {
-        background-color: #0B1F3A;
-    }
-
-    section[data-testid="stSidebar"] * {
+    .main-title {
+        background: #0B1F3A;
+        padding: 30px;
+        border-radius: 16px;
         color: white;
-    }
-
-    /* ===== HEADER ===== */
-
-    .header {
-        background: linear-gradient(
-            135deg,
-            #0B1F3A,
-            #17395F
-        );
-
-        padding: 30px 35px;
-        border-radius: 18px;
         margin-bottom: 25px;
     }
 
-    .header-title {
-        color: white;
-        font-size: 30px;
-        font-weight: 800;
-        margin-bottom: 5px;
+    .main-title h1 {
+        margin: 0;
+        font-size: 32px;
     }
 
-    .header-subtitle {
+    .main-title p {
         color: #B9C7D8;
-        font-size: 14px;
+        margin-bottom: 0;
     }
-
-    /* ===== SECTION ===== */
-
-    .section-title {
-        font-size: 22px;
-        font-weight: 800;
-        color: #102A43;
-        margin-top: 10px;
-        margin-bottom: 15px;
-    }
-
-    /* ===== CARD ===== */
 
     .card {
         background: white;
-        border-radius: 15px;
         padding: 22px;
-        border: 1px solid #E4EAF0;
-        box-shadow: 0 5px 18px rgba(16, 42, 67, 0.05);
-    }
-
-    /* ===== METRIC ===== */
-
-    .metric {
-        background: white;
         border-radius: 15px;
-        padding: 22px;
-        border: 1px solid #E4EAF0;
-        box-shadow: 0 5px 18px rgba(16, 42, 67, 0.05);
+        border: 1px solid #E3E8EF;
+        margin-bottom: 15px;
     }
 
-    .metric-label {
-        color: #7A8899;
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-    }
-
-    .metric-value {
-        color: #102A43;
+    .number {
         font-size: 30px;
-        font-weight: 800;
-        margin-top: 7px;
+        font-weight: bold;
+        color: #0B1F3A;
     }
 
-    .metric-small {
-        color: #9AA6B2;
-        font-size: 12px;
-        margin-top: 4px;
+    .label {
+        color: #718096;
+        font-size: 13px;
+        font-weight: bold;
     }
-
-    /* ===== HOT / WARM / COLD ===== */
 
     .hot {
-        display: inline-block;
-        background: #FFF0EE;
         color: #C0392B;
-        padding: 5px 11px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 800;
+        font-weight: bold;
     }
 
     .warm {
-        display: inline-block;
-        background: #FFF7E6;
-        color: #A86600;
-        padding: 5px 11px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 800;
+        color: #A66A00;
+        font-weight: bold;
     }
 
     .cold {
-        display: inline-block;
-        background: #EDF4FF;
         color: #2864B0;
-        padding: 5px 11px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 800;
+        font-weight: bold;
     }
-
-    /* ===== CUSTOMER ===== */
-
-    .customer {
-        background: white;
-        border-radius: 14px;
-        padding: 18px;
-        margin-bottom: 12px;
-        border: 1px solid #E4EAF0;
-    }
-
-    .customer-name {
-        color: #102A43;
-        font-size: 17px;
-        font-weight: 800;
-    }
-
-    .customer-info {
-        color: #718096;
-        font-size: 13px;
-        margin-top: 5px;
-    }
-
-    /* ===== SCORE ===== */
-
-    .score {
-        text-align: center;
-        background: #F7F9FC;
-        border-radius: 12px;
-        padding: 14px;
-        border: 1px solid #E5EAF0;
-    }
-
-    .score-number {
-        color: #102A43;
-        font-size: 30px;
-        font-weight: 800;
-    }
-
-    /* ===== GOLD ===== */
-
-    .gold {
-        color: #B18A45;
-        font-weight: 800;
-    }
-
-    /* ===== BUTTON ===== */
-
-    .stButton button {
-        border-radius: 9px;
-        font-weight: 700;
-    }
-
     </style>
     """,
     unsafe_allow_html=True
 )
 
 
-# =========================================================
-# 6. SIDEBAR
-# =========================================================
+# ==============================
+# SIDEBAR
+# ==============================
 
-with st.sidebar:
+st.sidebar.markdown(
+    """
+    <div style="text-align:center;padding:20px;">
+        <div style="font-size:40px;">🏦</div>
+        <h2 style="margin:5px;">SMARTBANK</h2>
+        <small>CUSTOMER CRM</small>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
-    st.markdown(
-        """
-        <div style="text-align:center; padding:20px 0 25px 0;">
+st.sidebar.divider()
 
-            <div style="font-size:38px;">
-                🏦
-            </div>
-
-            <div style="
-                font-size:20px;
-                font-weight:800;
-                letter-spacing:1px;
-            ">
-                SMARTBANK
-            </div>
-
-            <div style="
-                color:#AFC0D4;
-                font-size:10px;
-                letter-spacing:2px;
-                margin-top:5px;
-            ">
-                CUSTOMER CRM
-            </div>
-
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-
-    st.divider()
-
-    menu = st.radio(
-        "MENU",
-        [
-            "Tổng quan",
-            "Thêm khách hàng",
-            "Danh sách khách hàng",
-            "Pipeline",
-            "Phân tích"
-        ]
-    )
-
-    st.divider()
-
-    st.caption("SmartBank CRM")
-    st.caption("Customer Intelligence System")
+menu = st.sidebar.radio(
+    "MENU",
+    [
+        "Tổng quan",
+        "Thêm khách hàng",
+        "Danh sách khách hàng",
+        "Pipeline",
+        "Phân tích"
+    ]
+)
 
 
-# =========================================================
-# 7. HEADER
-# =========================================================
+# ==============================
+# HEADER
+# ==============================
 
 st.markdown(
     """
-    <div class="header">
-
-        <div class="header-title">
-            SMARTBANK CRM
-        </div>
-
-        <div class="header-subtitle">
-            Hệ thống quản lý và phân tích khách hàng tiềm năng
-        </div>
-
+    <div class="main-title">
+        <h1>SMARTBANK CRM</h1>
+        <p>Hệ thống quản lý khách hàng tiềm năng</p>
     </div>
     """,
     unsafe_allow_html=True
@@ -364,59 +185,45 @@ st.markdown(
 
 
 # =========================================================
-# 8. TỔNG QUAN
+# TRANG TỔNG QUAN
 # =========================================================
 
 if menu == "Tổng quan":
 
     customers = st.session_state.customers
 
-    total = len(customers)
+    tong_kh = len(customers)
 
     hot = sum(
-        1 for x in customers
-        if x["Phân loại"] == "HOT"
+        1 for kh in customers
+        if kh["Phân loại"] == "HOT"
     )
 
     warm = sum(
-        1 for x in customers
-        if x["Phân loại"] == "WARM"
+        1 for kh in customers
+        if kh["Phân loại"] == "WARM"
     )
 
-    converted = sum(
-        1 for x in customers
-        if x["Trạng thái"] == "Đã chuyển đổi"
+    da_chuyen_doi = sum(
+        1 for kh in customers
+        if kh["Trạng thái"] == "Đã chuyển đổi"
     )
 
-    total_amount = sum(
-        x["Nhu cầu tài chính"]
-        for x in customers
+    tong_nhu_cau = sum(
+        kh["Nhu cầu tài chính"]
+        for kh in customers
     )
 
-    st.markdown(
-        '<div class="section-title">Tổng quan hoạt động</div>',
-        unsafe_allow_html=True
-    )
+    st.subheader("Tổng quan")
 
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
         st.markdown(
             f"""
-            <div class="metric">
-
-                <div class="metric-label">
-                    Tổng khách hàng
-                </div>
-
-                <div class="metric-value">
-                    {total}
-                </div>
-
-                <div class="metric-small">
-                    Tổng số lead trong hệ thống
-                </div>
-
+            <div class="card">
+                <div class="label">TỔNG KHÁCH HÀNG</div>
+                <div class="number">{tong_kh}</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -425,20 +232,9 @@ if menu == "Tổng quan":
     with c2:
         st.markdown(
             f"""
-            <div class="metric">
-
-                <div class="metric-label">
-                    Khách hàng HOT
-                </div>
-
-                <div class="metric-value">
-                    {hot}
-                </div>
-
-                <div class="metric-small">
-                    Cần ưu tiên chăm sóc
-                </div>
-
+            <div class="card">
+                <div class="label">KHÁCH HÀNG HOT</div>
+                <div class="number">{hot}</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -447,20 +243,9 @@ if menu == "Tổng quan":
     with c3:
         st.markdown(
             f"""
-            <div class="metric">
-
-                <div class="metric-label">
-                    Đã chuyển đổi
-                </div>
-
-                <div class="metric-value">
-                    {converted}
-                </div>
-
-                <div class="metric-small">
-                    Khách hàng thành công
-                </div>
-
+            <div class="card">
+                <div class="label">KHÁCH WARM</div>
+                <div class="number">{warm}</div>
             </div>
             """,
             unsafe_allow_html=True
@@ -469,148 +254,72 @@ if menu == "Tổng quan":
     with c4:
         st.markdown(
             f"""
-            <div class="metric">
-
-                <div class="metric-label">
-                    Tổng nhu cầu
-                </div>
-
-                <div class="metric-value"
-                     style="font-size:22px;">
-                    {format_money(total_amount)}
-                </div>
-
-                <div class="metric-small">
-                    Tổng giá trị tài chính dự kiến
-                </div>
-
+            <div class="card">
+                <div class="label">ĐÃ CHUYỂN ĐỔI</div>
+                <div class="number">{da_chuyen_doi}</div>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-    st.write("")
+    st.divider()
 
-    # PIPELINE
+    st.subheader("Tổng nhu cầu tài chính")
 
     st.markdown(
-        '<div class="section-title">Customer Pipeline</div>',
+        f"""
+        <div class="card">
+            <div class="label">GIÁ TRỊ NHU CẦU DỰ KIẾN</div>
+            <div class="number">
+                {tien_vnd(tong_nhu_cau)}
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True
     )
 
-    statuses = [
-        "Mới tiếp nhận",
-        "Đã liên hệ",
-        "Đang tư vấn",
-        "Tiềm năng",
-        "Đã chuyển đổi"
-    ]
-
-    cols = st.columns(5)
-
-    for col, status in zip(cols, statuses):
-
-        count = sum(
-            1 for x in customers
-            if x["Trạng thái"] == status
-        )
-
-        with col:
-
-            st.markdown(
-                f"""
-                <div class="card"
-                     style="text-align:center;">
-
-                    <div style="
-                        color:#7A8899;
-                        font-size:12px;
-                        font-weight:700;
-                    ">
-                        {status}
-                    </div>
-
-                    <div style="
-                        color:#102A43;
-                        font-size:28px;
-                        font-weight:800;
-                        margin-top:8px;
-                    ">
-                        {count}
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-    st.write("")
-
-    # KHÁCH HÀNG ƯU TIÊN
-
-    st.markdown(
-        '<div class="section-title">Khách hàng ưu tiên</div>',
-        unsafe_allow_html=True
-    )
+    st.subheader("Khách hàng ưu tiên")
 
     hot_customers = [
-        x for x in customers
-        if x["Phân loại"] == "HOT"
+        kh for kh in customers
+        if kh["Phân loại"] == "HOT"
     ]
 
-    hot_customers = sorted(
-        hot_customers,
+    hot_customers.sort(
         key=lambda x: x["Điểm tiềm năng"],
         reverse=True
     )
 
     if not hot_customers:
-
-        st.info(
-            "Chưa có khách hàng HOT trong hệ thống."
-        )
+        st.info("Chưa có khách hàng HOT.")
 
     else:
 
-        for customer in hot_customers[:5]:
+        for kh in hot_customers[:5]:
 
             st.markdown(
                 f"""
-                <div class="customer">
+                <div class="card">
 
-                    <div style="
-                        display:flex;
-                        justify-content:space-between;
-                        align-items:center;
-                    ">
+                    <h3>{kh["Tên khách hàng"]}</h3>
 
-                        <div>
+                    <p>
+                        📱 {kh["Số điện thoại"]}
+                        &nbsp;&nbsp; | &nbsp;&nbsp;
+                        💳 {kh["Sản phẩm"]}
+                    </p>
 
-                            <div class="customer-name">
-                                {customer["Tên khách hàng"]}
-                            </div>
+                    <p>
+                        💰 Nhu cầu:
+                        <b>{tien_vnd(kh["Nhu cầu tài chính"])}</b>
+                    </p>
 
-                            <div class="customer-info">
-                                {customer["Số điện thoại"]}
-                                &nbsp; • &nbsp;
-                                {customer["Sản phẩm"]}
-                            </div>
-
-                        </div>
-
-                        <div class="score">
-
-                            <div class="score-number">
-                                {customer["Điểm tiềm năng"]}
-                            </div>
-
-                            <span class="hot">
-                                HOT
-                            </span>
-
-                        </div>
-
-                    </div>
+                    <p>
+                        Điểm tiềm năng:
+                        <b>{kh["Điểm tiềm năng"]}/100</b>
+                        &nbsp;&nbsp;
+                        <span class="hot">● HOT</span>
+                    </p>
 
                 </div>
                 """,
@@ -619,36 +328,27 @@ if menu == "Tổng quan":
 
 
 # =========================================================
-# 9. THÊM KHÁCH HÀNG
+# THÊM KHÁCH HÀNG
 # =========================================================
 
 elif menu == "Thêm khách hàng":
 
-    st.markdown(
-        '<div class="section-title">Tạo khách hàng tiềm năng</div>',
-        unsafe_allow_html=True
-    )
+    st.subheader("Tạo khách hàng tiềm năng")
 
-    st.caption(
-        "Nhập thông tin để hệ thống tự động đánh giá mức độ tiềm năng."
-    )
+    with st.form("form_khach_hang"):
 
-    st.divider()
-
-    with st.form("customer_form"):
-
-        st.markdown("### Thông tin khách hàng")
+        st.markdown("### 01. Thông tin khách hàng")
 
         col1, col2 = st.columns(2)
 
         with col1:
 
-            name = st.text_input(
+            ten = st.text_input(
                 "Họ và tên *",
                 placeholder="Nguyễn Văn A"
             )
 
-            phone = st.text_input(
+            sdt = st.text_input(
                 "Số điện thoại *",
                 placeholder="0912345678"
             )
@@ -658,26 +358,21 @@ elif menu == "Thêm khách hàng":
                 placeholder="example@gmail.com"
             )
 
-            area = st.text_input(
-                "Khu vực",
-                placeholder="Quận / Huyện / Tỉnh"
-            )
-
         with col2:
 
-            age = st.number_input(
+            tuoi = st.number_input(
                 "Tuổi",
                 min_value=18,
                 max_value=100,
                 value=25
             )
 
-            occupation = st.text_input(
+            nghe_nghiep = st.text_input(
                 "Nghề nghiệp",
-                placeholder="Nhân viên / Kinh doanh..."
+                placeholder="Nhân viên văn phòng"
             )
 
-            income = st.number_input(
+            thu_nhap = st.number_input(
                 "Thu nhập hàng tháng (VNĐ)",
                 min_value=0,
                 value=15_000_000,
@@ -686,13 +381,13 @@ elif menu == "Thêm khách hàng":
 
         st.divider()
 
-        st.markdown("### Nhu cầu tài chính")
+        st.markdown("### 02. Nhu cầu tài chính")
 
         col1, col2 = st.columns(2)
 
         with col1:
 
-            product = st.selectbox(
+            san_pham = st.selectbox(
                 "Sản phẩm quan tâm",
                 [
                     "Vay mua nhà",
@@ -704,129 +399,115 @@ elif menu == "Thêm khách hàng":
                 ]
             )
 
-            amount = st.number_input(
+        with col2:
+
+            nhu_cau = st.number_input(
                 "Số tiền dự kiến (VNĐ)",
                 min_value=0,
                 value=500_000_000,
                 step=50_000_000
             )
 
-        with col2:
+        khu_vuc = st.text_input(
+            "Khu vực",
+            placeholder="Hà Nội / TP.HCM..."
+        )
 
-            urgency = st.selectbox(
-                "Thời gian có nhu cầu",
-                [
-                    "Trong 1 tháng",
-                    "1 - 3 tháng",
-                    "3 - 6 tháng",
-                    "Trên 6 tháng"
-                ]
-            )
+        ghi_chu = st.text_area(
+            "Ghi chú",
+            placeholder="Nhu cầu hoặc thông tin thêm..."
+        )
 
-            note = st.text_area(
-                "Ghi chú",
-                placeholder="Thông tin thêm về nhu cầu..."
-            )
-
-        st.divider()
-
-        submitted = st.form_submit_button(
+        submit = st.form_submit_button(
             "LƯU KHÁCH HÀNG",
-            type="primary",
             use_container_width=True
         )
 
-    if submitted:
+    if submit:
 
-        if name.strip() == "":
+        if ten.strip() == "":
             st.error("Vui lòng nhập họ và tên.")
 
-        elif phone.strip() == "":
+        elif sdt.strip() == "":
             st.error("Vui lòng nhập số điện thoại.")
 
         else:
 
-            score, level = calculate_score(
-                income,
-                product,
-                amount,
-                urgency
+            diem, phan_loai = cham_diem(
+                thu_nhap,
+                san_pham,
+                nhu_cau
             )
 
-            code = (
-                "KH"
-                + datetime.now().strftime("%Y%m%d%H%M%S")
-            )
+            khach_hang = {
+                "Mã KH": "KH" + datetime.now().strftime(
+                    "%Y%m%d%H%M%S"
+                ),
 
-            customer = {
-                "Mã KH": code,
                 "Ngày tạo": datetime.now().strftime(
                     "%d/%m/%Y %H:%M"
                 ),
-                "Tên khách hàng": name.strip(),
-                "Số điện thoại": phone.strip(),
+
+                "Tên khách hàng": ten.strip(),
+
+                "Số điện thoại": sdt.strip(),
+
                 "Email": email.strip(),
-                "Tuổi": age,
-                "Nghề nghiệp": occupation.strip(),
-                "Thu nhập": income,
-                "Khu vực": area.strip(),
-                "Sản phẩm": product,
-                "Nhu cầu tài chính": amount,
-                "Thời gian nhu cầu": urgency,
-                "Điểm tiềm năng": score,
-                "Phân loại": level,
+
+                "Tuổi": tuoi,
+
+                "Nghề nghiệp": nghe_nghiep.strip(),
+
+                "Thu nhập": thu_nhap,
+
+                "Khu vực": khu_vuc.strip(),
+
+                "Sản phẩm": san_pham,
+
+                "Nhu cầu tài chính": nhu_cau,
+
+                "Điểm tiềm năng": diem,
+
+                "Phân loại": phan_loai,
+
                 "Trạng thái": "Mới tiếp nhận",
-                "Ghi chú": note.strip()
+
+                "Ghi chú": ghi_chu.strip()
             }
 
-            st.session_state.customers.append(customer)
+            st.session_state.customers.append(
+                khach_hang
+            )
 
             st.success(
-                f"Đã lưu khách hàng {name} thành công."
+                "Đã lưu khách hàng thành công!"
             )
 
             st.markdown(
                 f"""
                 <div class="card">
 
-                    <div style="
-                        color:#7A8899;
-                        font-size:12px;
-                        font-weight:700;
-                    ">
-                        KẾT QUẢ ĐÁNH GIÁ
-                    </div>
+                    <h2>{ten}</h2>
 
-                    <br>
+                    <p>
+                        Điểm tiềm năng:
+                        <b>{diem}/100</b>
+                    </p>
 
-                    <div style="
-                        font-size:28px;
-                        font-weight:800;
-                        color:#102A43;
-                    ">
-                        {name}
-                    </div>
+                    <p>
+                        Phân loại:
+                        <b>{phan_loai}</b>
+                    </p>
 
-                    <br>
+                    <p>
+                        Nhu cầu:
+                        <b>{tien_vnd(nhu_cau)}</b>
+                    </p>
 
-                    <b>Điểm tiềm năng:</b>
-                    {score}/100
-
-                    <br><br>
-
-                    <b>Mức độ:</b>
-                    <span class="{
-                        "hot" if level == "HOT"
-                        else "warm" if level == "WARM"
-                        else "cold"
-                    }">
-                        {level}
-                    </span>
-
-                    <br><br>
-
-                    <b>Nhu cầu tài chính:</b>
-                    {format_money(amount)}
+                    <p>
+                        Thu nhập:
+                        <b>{tien_vnd(thu_nhap)}</b>
+                    </p>
 
                 </div>
                 """,
@@ -835,106 +516,69 @@ elif menu == "Thêm khách hàng":
 
 
 # =========================================================
-# 10. DANH SÁCH KHÁCH HÀNG
+# DANH SÁCH
 # =========================================================
 
 elif menu == "Danh sách khách hàng":
 
-    st.markdown(
-        '<div class="section-title">Danh sách khách hàng</div>',
-        unsafe_allow_html=True
-    )
+    st.subheader("Danh sách khách hàng")
 
     customers = st.session_state.customers
 
     if not customers:
 
-        st.info(
-            "Chưa có dữ liệu khách hàng. Hãy tạo khách hàng đầu tiên."
-        )
+        st.info("Chưa có khách hàng.")
 
     else:
 
         df = pd.DataFrame(customers)
 
-        col1, col2 = st.columns(2)
+        search = st.text_input(
+            "Tìm kiếm",
+            placeholder="Nhập tên hoặc số điện thoại..."
+        )
 
-        with col1:
+        level = st.selectbox(
+            "Lọc theo phân loại",
+            [
+                "Tất cả",
+                "HOT",
+                "WARM",
+                "COLD"
+            ]
+        )
 
-            keyword = st.text_input(
-                "Tìm kiếm",
-                placeholder="Nhập tên hoặc số điện thoại..."
-            )
+        if search:
 
-        with col2:
-
-            filter_level = st.selectbox(
-                "Phân loại",
-                [
-                    "Tất cả",
-                    "HOT",
-                    "WARM",
-                    "COLD"
-                ]
-            )
-
-        filtered = df.copy()
-
-        if keyword:
-
-            filtered = filtered[
-                filtered["Tên khách hàng"].str.contains(
-                    keyword,
+            df = df[
+                df["Tên khách hàng"].str.contains(
+                    search,
                     case=False,
                     na=False
                 )
                 |
-                filtered["Số điện thoại"].str.contains(
-                    keyword,
+                df["Số điện thoại"].str.contains(
+                    search,
                     case=False,
                     na=False
                 )
             ]
 
-        if filter_level != "Tất cả":
+        if level != "Tất cả":
 
-            filtered = filtered[
-                filtered["Phân loại"] == filter_level
+            df = df[
+                df["Phân loại"] == level
             ]
 
-        display_df = filtered[
-            [
-                "Mã KH",
-                "Tên khách hàng",
-                "Số điện thoại",
-                "Sản phẩm",
-                "Thu nhập",
-                "Nhu cầu tài chính",
-                "Điểm tiềm năng",
-                "Phân loại",
-                "Trạng thái"
-            ]
-        ].copy()
+        display_df = df.copy()
 
         display_df["Thu nhập"] = display_df[
             "Thu nhập"
-        ].apply(format_money)
+        ].apply(tien_vnd)
 
         display_df["Nhu cầu tài chính"] = display_df[
             "Nhu cầu tài chính"
-        ].apply(format_money)
-
-        display_df.columns = [
-            "Mã KH",
-            "Khách hàng",
-            "Số điện thoại",
-            "Sản phẩm",
-            "Thu nhập",
-            "Nhu cầu",
-            "Điểm",
-            "Phân loại",
-            "Trạng thái"
-        ]
+        ].apply(tien_vnd)
 
         st.dataframe(
             display_df,
@@ -942,23 +586,19 @@ elif menu == "Danh sách khách hàng":
             hide_index=True
         )
 
-        st.caption(
-            f"Hiển thị {len(display_df)} khách hàng"
-        )
-
-        st.divider()
-
+        # ==========================
         # XUẤT EXCEL
+        # ==========================
 
-        export_df = df.copy()
+        excel_df = df.copy()
 
-        export_df["Thu nhập"] = export_df[
+        excel_df["Thu nhập"] = excel_df[
             "Thu nhập"
-        ].apply(format_money)
+        ].apply(tien_vnd)
 
-        export_df["Nhu cầu tài chính"] = export_df[
+        excel_df["Nhu cầu tài chính"] = excel_df[
             "Nhu cầu tài chính"
-        ].apply(format_money)
+        ].apply(tien_vnd)
 
         output = BytesIO()
 
@@ -967,14 +607,14 @@ elif menu == "Danh sách khách hàng":
             engine="openpyxl"
         ) as writer:
 
-            export_df.to_excel(
+            excel_df.to_excel(
                 writer,
                 index=False,
                 sheet_name="Khach_Hang"
             )
 
         st.download_button(
-            "XUẤT DỮ LIỆU EXCEL",
+            "📥 XUẤT FILE EXCEL",
             data=output.getvalue(),
             file_name="SmartBank_CRM.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -983,15 +623,12 @@ elif menu == "Danh sách khách hàng":
 
 
 # =========================================================
-# 11. PIPELINE
+# PIPELINE
 # =========================================================
 
 elif menu == "Pipeline":
 
-    st.markdown(
-        '<div class="section-title">Customer Pipeline</div>',
-        unsafe_allow_html=True
-    )
+    st.subheader("Customer Pipeline")
 
     customers = st.session_state.customers
 
@@ -1011,27 +648,18 @@ elif menu == "Pipeline":
 
             st.markdown(
                 f"""
-                <div class="card"
-                     style="text-align:center;">
+                <div class="card" style="text-align:center">
 
-                    <div style="
-                        font-size:13px;
-                        font-weight:700;
-                        color:#718096;
-                    ">
+                    <div class="label">
                         {stage}
                     </div>
 
-                    <div style="
-                        font-size:30px;
-                        font-weight:800;
-                        color:#102A43;
-                        margin-top:8px;
-                    ">
+                    <div class="number">
                         {
                             sum(
-                                1 for x in customers
-                                if x["Trạng thái"] == stage
+                                1
+                                for kh in customers
+                                if kh["Trạng thái"] == stage
                             )
                         }
                     </div>
@@ -1041,82 +669,20 @@ elif menu == "Pipeline":
                 unsafe_allow_html=True
             )
 
-            st.write("")
-
-            stage_customers = [
-                x for x in customers
-                if x["Trạng thái"] == stage
-            ]
-
-            for customer in stage_customers:
-
-                level = customer["Phân loại"]
-
-                css_class = (
-                    "hot"
-                    if level == "HOT"
-                    else "warm"
-                    if level == "WARM"
-                    else "cold"
-                )
-
-                st.markdown(
-                    f"""
-                    <div class="customer">
-
-                        <div class="customer-name">
-                            {customer["Tên khách hàng"]}
-                        </div>
-
-                        <div class="customer-info">
-                            {customer["Sản phẩm"]}
-                        </div>
-
-                        <br>
-
-                        <span class="{css_class}">
-                            {level}
-                        </span>
-
-                        <br><br>
-
-                        <b>
-                            {customer["Điểm tiềm năng"]}/100
-                        </b>
-
-                        <br><br>
-
-                        <span style="
-                            color:#718096;
-                            font-size:12px;
-                        ">
-                            {format_money(
-                                customer["Nhu cầu tài chính"]
-                            )}
-                        </span>
-
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
 
 # =========================================================
-# 12. PHÂN TÍCH
+# PHÂN TÍCH
 # =========================================================
 
 elif menu == "Phân tích":
 
-    st.markdown(
-        '<div class="section-title">Phân tích khách hàng</div>',
-        unsafe_allow_html=True
-    )
+    st.subheader("Phân tích khách hàng")
 
     customers = st.session_state.customers
 
     if not customers:
 
-        st.info("Chưa có dữ liệu để phân tích.")
+        st.info("Chưa có dữ liệu.")
 
     else:
 
@@ -1128,102 +694,44 @@ elif menu == "Phân tích":
 
             st.markdown("### Phân loại khách hàng")
 
-            chart = df[
+            chart1 = df[
                 "Phân loại"
             ].value_counts()
 
-            st.bar_chart(chart)
+            st.bar_chart(chart1)
 
         with col2:
 
-            st.markdown("### Sản phẩm được quan tâm")
+            st.markdown("### Sản phẩm quan tâm")
 
-            chart = df[
+            chart2 = df[
                 "Sản phẩm"
             ].value_counts()
 
-            st.bar_chart(chart)
+            st.bar_chart(chart2)
 
         st.divider()
 
-        total_money = df[
+        tong_nhu_cau = df[
             "Nhu cầu tài chính"
         ].sum()
 
-        avg_score = df[
+        diem_tb = df[
             "Điểm tiềm năng"
         ].mean()
 
-        hot_rate = (
-            len(
-                df[
-                    df["Phân loại"] == "HOT"
-                ]
-            )
-            / len(df)
-            * 100
-        )
-
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
 
         with c1:
 
-            st.markdown(
-                f"""
-                <div class="metric">
-
-                    <div class="metric-label">
-                        Tổng nhu cầu tài chính
-                    </div>
-
-                    <div class="metric-value"
-                         style="font-size:23px;">
-                        {format_money(total_money)}
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
+            st.metric(
+                "Tổng nhu cầu tài chính",
+                tien_vnd(tong_nhu_cau)
             )
 
         with c2:
 
-            st.markdown(
-                f"""
-                <div class="metric">
-
-                    <div class="metric-label">
-                        Điểm trung bình
-                    </div>
-
-                    <div class="metric-value">
-                        {avg_score:.1f}
-                    </div>
-
-                    <div class="metric-small">
-                        Trên thang điểm 100
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        with c3:
-
-            st.markdown(
-                f"""
-                <div class="metric">
-
-                    <div class="metric-label">
-                        Tỷ lệ HOT
-                    </div>
-
-                    <div class="metric-value">
-                        {hot_rate:.1f}%
-                    </div>
-
-                </div>
-                """,
-                unsafe_allow_html=True
+            st.metric(
+                "Điểm tiềm năng trung bình",
+                f"{diem_tb:.1f}/100"
             )
