@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from io import BytesIO
+import os
 import sqlite3
 import pandas as pd
 import streamlit as st
@@ -299,8 +300,6 @@ def calculate_score(income, product, amount, need_time):
     if need_time == "Trong 1 tháng":
         score += 20
     elif need_time == "1 - 3 tháng":
-        score += 15
-    elif need_time == "3 - 6 tháng":
         score += 10
     else:
         score += 5
@@ -325,16 +324,24 @@ df = load_customers()
 
 
 # =========================================================
-# 7. THANH MENU BÊN TRÁI (SIDEBAR)
+# 7. THANH MENU BÊN TRÁI (SIDEBAR & HIỂN THỊ LOGO TỰ ĐỘNG)
 # =========================================================
 
 with st.sidebar:
+    # URL Raw của logo trên GitHub repository của bạn
+    GITHUB_LOGO_URL = "https://raw.githubusercontent.com/2311552999-Na/MarketingNH/main/logo.jpg"
+
+    # Kiểm tra xem file logo.jpg có nằm ở thư mục cục bộ không, nếu không sẽ load từ link GitHub
+    if os.path.exists("logo.jpg"):
+        st.image("logo.jpg", use_container_width=True)
+    else:
+        st.image(GITHUB_LOGO_URL, use_container_width=True)
+
     st.markdown(
         """
-        <div style="text-align:center; padding:20px 0;">
-            <div style="font-size:48px;">🏦</div>
-            <h2>MB BANK</h2>
-            <p style="opacity:0.8;">Lead Manager</p>
+        <div style="text-align:center; margin-top:-10px; margin-bottom:15px;">
+            <h2 style="margin:0;">MB BANK</h2>
+            <p style="opacity:0.8; font-size:14px; margin:0;">Lead Manager</p>
         </div>
         """,
         unsafe_allow_html=True,
@@ -355,7 +362,7 @@ with st.sidebar:
     )
 
     st.divider()
-    st.caption("MB Bank Lead Manager\nPhiên bản 2.0 (Đã fix định dạng tiền VNĐ)")
+    st.caption("MB Bank Lead Manager\nPhiên bản 2.0 (Tự động tải Logo)")
 
 
 # =========================================================
