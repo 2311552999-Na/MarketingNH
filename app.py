@@ -33,7 +33,7 @@ st.markdown(
 }
 
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #001A9C 0%, #000B4D 100%);
+    background: linear-gradient(180deg, #071b3a 0%, #0d2b5c 100%);
 }
 
 [data-testid="stSidebar"] * {
@@ -41,12 +41,12 @@ st.markdown(
 }
 
 .crm-header {
-    background: linear-gradient(135deg, #001A9C, #1261c9);
+    background: linear-gradient(135deg, #0b3d91, #1261c9);
     padding: 28px 32px;
     border-radius: 18px;
     color: white;
     margin-bottom: 25px;
-    box-shadow: 0 8px 25px rgba(0, 26, 156, 0.2);
+    box-shadow: 0 8px 25px rgba(0, 60, 140, 0.15);
 }
 
 .crm-header h1 {
@@ -146,7 +146,7 @@ st.markdown(
 # 3. KẾT NỐI CƠ SỞ DỮ LIỆU SQLITE
 # =========================================================
 
-DB_NAME = "mb_bank_lead_manager.db"
+DB_NAME = "smart_banking_crm.db"
 
 
 def get_connection():
@@ -196,8 +196,8 @@ init_database()
 
 
 def format_currency_vnd(amount):
-    """
-    Quy đổi tự động số tiền nhập vào (nếu nhỏ hơn 1.000.000 sẽ tự nhân 1.000.000)
+    """Quy đổi tự động số tiền nhập vào (nếu nhỏ hơn 1.000.000 sẽ tự nhân 1.000.000)
+
     và định dạng bằng dấu chấm phân cách hàng nghìn chuẩn VNĐ.
     """
     if pd.isna(amount) or amount is None:
@@ -325,28 +325,20 @@ df = load_customers()
 
 
 # =========================================================
-# 7. THANH MENU BÊN TRÁI (SIDEBAR) & UPLOAD LOGO
+# 7. THANH MENU BÊN TRÁI (SIDEBAR)
 # =========================================================
 
 with st.sidebar:
     st.markdown(
         """
-        <div style="text-align:center; padding-top:10px;">
+        <div style="text-align:center; padding:20px 0;">
+            <div style="font-size:48px;">🏦</div>
             <h2>MB BANK</h2>
-            <p style="opacity:0.8; font-size:14px;">Lead Manager</p>
+            <p style="opacity:0.8;">Lead Manager</p>
         </div>
         """,
         unsafe_allow_html=True,
     )
-
-    # Mục Tải/Hiển thị Logo MB Bank
-    uploaded_logo = st.file_uploader(
-        "🖼️ Tải logo thương hiệu", type=["png", "jpg", "jpeg"]
-    )
-    if uploaded_logo is not None:
-        st.image(uploaded_logo, use_container_width=True)
-    else:
-        st.caption("📌 Bạn có thể tải ảnh Logo MB Bank vào đây để hiển thị.")
 
     st.divider()
 
@@ -363,7 +355,7 @@ with st.sidebar:
     )
 
     st.divider()
-    st.caption("MB Bank Lead Manager\nPhiên bản 2.0 (Custom Logo & Brand)")
+    st.caption("MB Bank Lead Manager\nPhiên bản 2.0 (Đã fix định dạng tiền VNĐ)")
 
 
 # =========================================================
@@ -374,7 +366,7 @@ st.markdown(
     """
     <div class="crm-header">
         <h1>🏦 MB BANK LEAD MANAGER</h1>
-        <p>Hệ thống quản lý và chăm sóc khách hàng tiềm năng Ngân hàng TMCP Quân đội (MB)</p>
+        <p>Hệ thống quản lý và chăm sóc khách hàng tiềm năng Ngân hàng MB</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -543,7 +535,7 @@ elif menu == "➕ Thêm khách hàng":
             score, classification = calculate_score(
                 income, product, amount, need_time
             )
-            code = "MB" + datetime.now().strftime("%y%m%d%H%M%S")
+            code = "KH" + datetime.now().strftime("%y%m%d%H%M%S")
             created = datetime.now().strftime("%Y-%m-%d %H:%M")
 
             data = {
@@ -622,12 +614,8 @@ elif menu == "👥 Khách hàng":
 
         if keyword:
             filtered = filtered[
-                filtered["name"].str.contains(
-                    keyword, case=False, na=False
-                )
-                | filtered["phone"].str.contains(
-                    keyword, case=False, na=False
-                )
+                filtered["name"].str.contains(keyword, case=False, na=False)
+                | filtered["phone"].str.contains(keyword, case=False, na=False)
             ]
 
         if classification_filter != "Tất cả":
@@ -684,7 +672,9 @@ elif menu == "👥 Khách hàng":
         customer_options = filtered["name"].tolist()
 
         if customer_options:
-            selected_name = st.selectbox("Chọn khách hàng để xem", customer_options)
+            selected_name = st.selectbox(
+                "Chọn khách hàng để xem", customer_options
+            )
             selected = filtered[filtered["name"] == selected_name].iloc[0]
 
             col1, col2 = st.columns([2, 1])
@@ -818,7 +808,7 @@ elif menu == "🎯 Pipeline":
 # --- E. TRANG PHÂN TÍCH THỐNG KÊ ---
 elif menu == "📊 Phân tích":
     st.markdown(
-        '<div class="section-title">📊 Phân tích dữ liệu kinh doanh MB Bank</div>',
+        '<div class="section-title">📊 Phân tích dữ liệu kinh doanh</div>',
         unsafe_allow_html=True,
     )
 
@@ -866,7 +856,7 @@ elif menu == "📊 Phân tích":
         )
 
 
-# --- F. TRANG CẦN CHĂM SÓC ---
+# --- F. TRANG CẦN CHĂM SÓC (PRIORITY LEADS) ---
 elif menu == "📞 Cần chăm sóc":
     st.markdown(
         '<div class="section-title">📞 Danh sách ưu tiên chăm sóc ngay</div>',
@@ -920,12 +910,12 @@ df_export = load_customers()
 if not df_export.empty:
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df_export.to_excel(writer, index=False, sheet_name="Khach_Hang_MBBank")
+        df_export.to_excel(writer, index=False, sheet_name="Khach_Hang")
 
     st.sidebar.download_button(
         "📥 Xuất báo cáo Excel",
         data=output.getvalue(),
-        file_name="Danh_Sach_Khach_Hang_MBBank.xlsx",
+        file_name="MB_Bank_Lead_Report.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True,
     )
