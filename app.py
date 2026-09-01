@@ -1,9 +1,8 @@
-import streamlit as st
-import pandas as pd
-import sqlite3
-from datetime import datetime, date
+from datetime import date, datetime
 from io import BytesIO
-
+import sqlite3
+import pandas as pd
+import streamlit as st
 
 # =========================================================
 # CẤU HÌNH
@@ -13,7 +12,7 @@ st.set_page_config(
     page_title="Smart Banking CRM",
     page_icon="🏦",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 
@@ -21,7 +20,8 @@ st.set_page_config(
 # CSS - GIAO DIỆN
 # =========================================================
 
-st.markdown("""
+st.markdown(
+    """
 <style>
 
 .main {
@@ -139,7 +139,9 @@ st.markdown("""
 }
 
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 # =========================================================
@@ -154,7 +156,6 @@ def get_connection():
 
 
 def init_database():
-
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -192,29 +193,30 @@ init_database()
 
 
 # =========================================================
-# DATABASE FUNCTIONS
+# HELPER & DATABASE FUNCTIONS
 # =========================================================
 
+
+def format_currency(amount):
+    """Định dạng số tiền theo dạng 100.000.000"""
+    if pd.isna(amount) or amount is None:
+        return "0"
+    return f"{int(amount):,}".replace(",", ".")
+
+
 def load_customers():
-
     conn = get_connection()
-
-    df = pd.read_sql_query(
-        "SELECT * FROM customers ORDER BY id DESC",
-        conn
-    )
-
+    df = pd.read_sql_query("SELECT * FROM customers ORDER BY id DESC", conn)
     conn.close()
-
     return df
 
 
 def add_customer(data):
-
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO customers (
             customer_code,
             created_at,
@@ -238,20 +240,20 @@ def add_customer(data):
             note
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, tuple(data.values()))
+    """,
+        tuple(data.values()),
+    )
 
     conn.commit()
     conn.close()
 
 
 def update_status(customer_id, new_status):
-
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
-        "UPDATE customers SET status = ? WHERE id = ?",
-        (new_status, customer_id)
+        "UPDATE customers SET status = ? WHERE id = ?", (new_status, customer_id)
     )
 
     conn.commit()
@@ -259,14 +261,10 @@ def update_status(customer_id, new_status):
 
 
 def delete_customer(customer_id):
-
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "DELETE FROM customers WHERE id = ?",
-        (customer_id,)
-    )
+    cursor.execute("DELETE FROM customers WHERE id = ?", (customer_id,))
 
     conn.commit()
     conn.close()
@@ -276,8 +274,8 @@ def delete_customer(customer_id):
 # LEAD SCORING
 # =========================================================
 
-def calculate_score(income, product, amount, need_time):
 
+def calculate_score(income, product, amount, need_time):
     score = 0
 
     # Thu nhập
@@ -291,21 +289,12 @@ def calculate_score(income, product, amount, need_time):
         score += 10
 
     # Sản phẩm
-    if product in [
-        "Vay mua nhà",
-        "Vay kinh doanh"
-    ]:
+    if product in ["Vay mua nhà", "Vay kinh doanh"]:
         score += 25
-
-    elif product in [
-        "Vay mua ô tô",
-        "Thẻ tín dụng"
-    ]:
+    elif product in ["Vay mua ô tô", "Thẻ tín dụng"]:
         score += 20
-
     elif product == "Gửi tiết kiệm":
         score += 18
-
     else:
         score += 10
 
@@ -333,88 +322,12 @@ def calculate_score(income, product, amount, need_time):
 
     if score >= 80:
         classification = "HOT"
-
     elif score >= 50:
         classification = "WARM"
-
     else:
         classification = "COLD"
 
     return score, classification
-
-
-# =========================================================
-# SMART RECOMMENDATION
-# =========================================================
-
-def recommendation(product, income, amount):
-
-    recommendations = []
-
-    if product == "Vay mua nhà":
-
-        recommendations.append(
-            ("🏠 Vay mua nhà", 95)
-        )
-
-        if income >= 30:
-            recommendations.append(
-                ("💳 Thẻ tín dụng", 82)
-            )
-
-        if amount >= 2000:
-            recommendations.append(
-                ("🛡️ Bảo hiểm", 70)
-            )
-
-    elif product == "Vay mua ô tô":
-
-        recommendations.append(
-            ("🚗 Vay mua ô tô", 95)
-        )
-
-        recommendations.append(
-            ("💳 Thẻ tín dụng", 75)
-        )
-
-    elif product == "Thẻ tín dụng":
-
-        recommendations.append(
-            ("💳 Thẻ tín dụng", 95)
-        )
-
-        if income >= 30:
-            recommendations.append(
-                ("💰 Tiết kiệm", 70)
-            )
-
-    elif product == "Gửi tiết kiệm":
-
-        recommendations.append(
-            ("💰 Tiết kiệm", 95)
-        )
-
-        recommendations.append(
-            ("🛡️ Bảo hiểm", 75)
-        )
-
-    elif product == "Vay kinh doanh":
-
-        recommendations.append(
-            ("🏢 Vay kinh doanh", 95)
-        )
-
-        recommendations.append(
-            ("💳 Thẻ tín dụng", 70)
-        )
-
-    else:
-
-        recommendations.append(
-            ("💳 Tài khoản thanh toán", 85)
-        )
-
-    return recommendations
 
 
 # =========================================================
@@ -429,7 +342,6 @@ df = load_customers()
 # =========================================================
 
 with st.sidebar:
-
     st.markdown(
         """
         <div style="text-align:center; padding:20px 0;">
@@ -438,7 +350,7 @@ with st.sidebar:
             <p style="opacity:0.8;">Lead Management System</p>
         </div>
         """,
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     st.divider()
@@ -451,16 +363,13 @@ with st.sidebar:
             "➕ Thêm khách hàng",
             "🎯 Pipeline",
             "📊 Phân tích",
-            "📞 Cần chăm sóc"
-        ]
+            "📞 Cần chăm sóc",
+        ],
     )
 
     st.divider()
 
-    st.caption(
-        "Smart Banking CRM\n"
-        "Version 1.0"
-    )
+    st.caption("Smart Banking CRM\nVersion 1.0")
 
 
 # =========================================================
@@ -474,7 +383,7 @@ st.markdown(
         <p>Hệ thống quản lý và khai thác khách hàng tiềm năng</p>
     </div>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 
@@ -483,59 +392,33 @@ st.markdown(
 # =========================================================
 
 if menu == "🏠 Tổng quan":
-
     total = len(df)
-
-    hot = len(
-        df[df["classification"] == "HOT"]
-    ) if total else 0
-
-    warm = len(
-        df[df["classification"] == "WARM"]
-    ) if total else 0
-
-    cold = len(
-        df[df["classification"] == "COLD"]
-    ) if total else 0
+    hot = len(df[df["classification"] == "HOT"]) if total else 0
+    warm = len(df[df["classification"] == "WARM"]) if total else 0
+    cold = len(df[df["classification"] == "COLD"]) if total else 0
 
     st.markdown(
         '<div class="section-title">📊 Tổng quan khách hàng</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-        st.metric(
-            "👥 Tổng khách hàng",
-            total
-        )
-
+        st.metric("👥 Tổng khách hàng", total)
     with c2:
-        st.metric(
-            "🔥 Khách HOT",
-            hot
-        )
-
+        st.metric("🔥 Khách HOT", hot)
     with c3:
-        st.metric(
-            "⚡ Khách WARM",
-            warm
-        )
-
+        st.metric("⚡ Khách WARM", warm)
     with c4:
-        st.metric(
-            "❄️ Khách COLD",
-            cold
-        )
+        st.metric("❄️ Khách COLD", cold)
 
     st.divider()
 
     # PIPELINE
-
     st.markdown(
         '<div class="section-title">📌 Pipeline khách hàng</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     statuses = [
@@ -543,19 +426,14 @@ if menu == "🏠 Tổng quan":
         "Đã liên hệ",
         "Đang tư vấn",
         "Tiềm năng",
-        "Đã chuyển đổi"
+        "Đã chuyển đổi",
     ]
 
     cols = st.columns(5)
 
     for col, status in zip(cols, statuses):
-
-        count = len(
-            df[df["status"] == status]
-        ) if total else 0
-
+        count = len(df[df["status"] == status]) if total else 0
         with col:
-
             st.markdown(
                 f"""
                 <div class="pipeline">
@@ -563,40 +441,25 @@ if menu == "🏠 Tổng quan":
                     <div class="pipeline-number">{count}</div>
                 </div>
                 """,
-                unsafe_allow_html=True
+                unsafe_allow_html=True,
             )
 
     st.divider()
 
     # KHÁCH HOT
-
     st.markdown(
         '<div class="section-title">🔥 Khách hàng cần ưu tiên</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     if total == 0:
-
-        st.info(
-            "Chưa có dữ liệu. Hãy thêm khách hàng đầu tiên."
-        )
-
+        st.info("Chưa có dữ liệu. Hãy thêm khách hàng đầu tiên.")
     else:
-
-        hot_df = df[
-            df["classification"] == "HOT"
-        ].head(5)
-
+        hot_df = df[df["classification"] == "HOT"].head(5)
         if hot_df.empty:
-
-            st.info(
-                "Hiện chưa có khách hàng HOT."
-            )
-
+            st.info("Hiện chưa có khách hàng HOT.")
         else:
-
             for _, row in hot_df.iterrows():
-
                 st.markdown(
                     f"""
                     <div class="card hot-card">
@@ -606,14 +469,12 @@ if menu == "🏠 Tổng quan":
                             {row['product']} · {row['phone']}
                         </span>
                         <br><br>
-                        ⭐ Điểm tiềm năng:
-                        <b>{row['score']}/100</b>
+                        ⭐ Điểm tiềm năng: <b>{row['score']}/100</b>
                         &nbsp;&nbsp;
-                        📌 Trạng thái:
-                        <b>{row['status']}</b>
+                        📌 Trạng thái: <b>{row['status']}</b>
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
 
@@ -622,70 +483,38 @@ if menu == "🏠 Tổng quan":
 # =========================================================
 
 elif menu == "➕ Thêm khách hàng":
-
     st.markdown(
         '<div class="section-title">➕ Tạo khách hàng tiềm năng</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     st.info(
-        "💡 Hệ thống sẽ tự động tính điểm tiềm năng "
-        "dựa trên thông tin khách hàng."
+        "💡 Hệ thống sẽ tự động tính điểm tiềm năng dựa trên thông tin khách hàng."
     )
 
     with st.form("customer_form"):
-
         col1, col2, col3 = st.columns(3)
 
         with col1:
-
-            name = st.text_input(
-                "👤 Họ và tên *"
-            )
-
-            phone = st.text_input(
-                "📱 Số điện thoại *"
-            )
-
-            email = st.text_input(
-                "📧 Email"
-            )
-
-            gender = st.selectbox(
-                "⚧ Giới tính",
-                [
-                    "Nam",
-                    "Nữ",
-                    "Khác"
-                ]
-            )
+            name = st.text_input("👤 Họ và tên *")
+            phone = st.text_input("📱 Số điện thoại *")
+            email = st.text_input("📧 Email")
+            gender = st.selectbox("⚧ Giới tính", ["Nam", "Nữ", "Khác"])
 
         with col2:
-
             age = st.number_input(
-                "🎂 Tuổi",
-                min_value=18,
-                max_value=100,
-                value=25
+                "🎂 Tuổi", min_value=18, max_value=100, value=25
             )
-
-            occupation = st.text_input(
-                "💼 Nghề nghiệp"
-            )
-
+            occupation = st.text_input("💼 Nghề nghiệp")
             income = st.number_input(
                 "💰 Thu nhập/tháng (triệu VNĐ)",
                 min_value=0.0,
                 value=15.0,
-                step=1.0
+                step=1.0,
             )
-
-            area = st.text_input(
-                "📍 Khu vực"
-            )
+            area = st.text_input("📍 Khu vực")
 
         with col3:
-
             product = st.selectbox(
                 "💳 Sản phẩm quan tâm",
                 [
@@ -694,69 +523,42 @@ elif menu == "➕ Thêm khách hàng":
                     "Vay kinh doanh",
                     "Thẻ tín dụng",
                     "Gửi tiết kiệm",
-                    "Tài khoản thanh toán"
-                ]
+                    "Tài khoản thanh toán",
+                ],
             )
-
             amount = st.number_input(
                 "💵 Nhu cầu dự kiến (triệu VNĐ)",
                 min_value=0.0,
                 value=500.0,
-                step=100.0
+                step=50.0,
             )
-
             need_time = st.selectbox(
                 "📅 Thời gian có nhu cầu",
                 [
                     "Trong 1 tháng",
                     "1 - 3 tháng",
                     "3 - 6 tháng",
-                    "Trên 6 tháng"
-                ]
+                    "Trên 6 tháng",
+                ],
             )
+            employee = st.text_input("👨‍💼 Nhân viên phụ trách")
 
-            employee = st.text_input(
-                "👨‍💼 Nhân viên phụ trách"
-            )
-
-        note = st.text_area(
-            "📝 Ghi chú"
-        )
-
+        note = st.text_area("📝 Ghi chú")
         submitted = st.form_submit_button(
-            "🚀 TẠO KHÁCH HÀNG",
-            use_container_width=True
+            "🚀 TẠO KHÁCH HÀNG", use_container_width=True
         )
 
     if submitted:
-
         if name.strip() == "":
-            st.error(
-                "Vui lòng nhập họ tên."
-            )
-
+            st.error("Vui lòng nhập họ tên.")
         elif phone.strip() == "":
-            st.error(
-                "Vui lòng nhập số điện thoại."
-            )
-
+            st.error("Vui lòng nhập số điện thoại.")
         else:
-
             score, classification = calculate_score(
-                income,
-                product,
-                amount,
-                need_time
+                income, product, amount, need_time
             )
-
-            code = (
-                "KH"
-                + datetime.now().strftime("%y%m%d%H%M%S")
-            )
-
-            created = datetime.now().strftime(
-                "%Y-%m-%d %H:%M"
-            )
+            code = "KH" + datetime.now().strftime("%y%m%d%H%M%S")
+            created = datetime.now().strftime("%Y-%m-%d %H:%M")
 
             data = {
                 "customer_code": code,
@@ -778,32 +580,19 @@ elif menu == "➕ Thêm khách hàng":
                 "employee": employee,
                 "last_contact": "",
                 "next_contact": "",
-                "note": note
+                "note": note,
             }
 
             add_customer(data)
 
-            st.success(
-                f"🎉 Đã tạo khách hàng {name}!"
-            )
+            st.success(f"🎉 Đã tạo khách hàng {name}!")
 
             if classification == "HOT":
-
-                st.error(
-                    f"🔥 HOT LEAD — Điểm tiềm năng: {score}/100"
-                )
-
+                st.error(f"🔥 HOT LEAD — Điểm tiềm năng: {score}/100")
             elif classification == "WARM":
-
-                st.warning(
-                    f"⚡ WARM LEAD — Điểm tiềm năng: {score}/100"
-                )
-
+                st.warning(f"⚡ WARM LEAD — Điểm tiềm năng: {score}/100")
             else:
-
-                st.info(
-                    f"❄️ COLD LEAD — Điểm tiềm năng: {score}/100"
-                )
+                st.info(f"❄️ COLD LEAD — Điểm tiềm năng: {score}/100")
 
             st.balloons()
 
@@ -813,45 +602,27 @@ elif menu == "➕ Thêm khách hàng":
 # =========================================================
 
 elif menu == "👥 Khách hàng":
-
     st.markdown(
         '<div class="section-title">👥 Danh sách khách hàng</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     df = load_customers()
 
     if df.empty:
-
-        st.info(
-            "Chưa có khách hàng."
-        )
-
+        st.info("Chưa có khách hàng.")
     else:
-
         col1, col2, col3 = st.columns(3)
 
         with col1:
-
-            keyword = st.text_input(
-                "🔎 Tìm kiếm",
-                placeholder="Tên / SĐT..."
-            )
+            keyword = st.text_input("🔎 Tìm kiếm", placeholder="Tên / SĐT...")
 
         with col2:
-
             classification_filter = st.selectbox(
-                "🎯 Phân loại",
-                [
-                    "Tất cả",
-                    "HOT",
-                    "WARM",
-                    "COLD"
-                ]
+                "🎯 Phân loại", ["Tất cả", "HOT", "WARM", "COLD"]
             )
 
         with col3:
-
             status_filter = st.selectbox(
                 "📌 Trạng thái",
                 [
@@ -860,45 +631,31 @@ elif menu == "👥 Khách hàng":
                     "Đã liên hệ",
                     "Đang tư vấn",
                     "Tiềm năng",
-                    "Đã chuyển đổi"
-                ]
+                    "Đã chuyển đổi",
+                ],
             )
 
         filtered = df.copy()
 
         if keyword:
-
             filtered = filtered[
                 filtered["name"].str.contains(
-                    keyword,
-                    case=False,
-                    na=False
+                    keyword, case=False, na=False
                 )
-                |
-                filtered["phone"].str.contains(
-                    keyword,
-                    case=False,
-                    na=False
+                | filtered["phone"].str.contains(
+                    keyword, case=False, na=False
                 )
             ]
 
         if classification_filter != "Tất cả":
-
             filtered = filtered[
-                filtered["classification"]
-                == classification_filter
+                filtered["classification"] == classification_filter
             ]
 
         if status_filter != "Tất cả":
+            filtered = filtered[filtered["status"] == status_filter]
 
-            filtered = filtered[
-                filtered["status"]
-                == status_filter
-            ]
-
-        st.write(
-            f"**{len(filtered)}** khách hàng được tìm thấy"
-        )
+        st.write(f"**{len(filtered)}** khách hàng được tìm thấy")
 
         display_df = filtered[
             [
@@ -910,9 +667,17 @@ elif menu == "👥 Khách hàng":
                 "expected_amount",
                 "score",
                 "classification",
-                "status"
+                "status",
             ]
         ].copy()
+
+        # Định dạng hiển thị tiền Việt .000.000 VNĐ
+        display_df["income"] = display_df["income"].apply(
+            lambda x: f"{format_currency(x * 1_000_000 if x < 1000 else x)} VNĐ"
+        )
+        display_df["expected_amount"] = display_df["expected_amount"].apply(
+            lambda x: f"{format_currency(x * 1_000_000 if x < 1000 else x)} VNĐ"
+        )
 
         display_df.columns = [
             "Mã KH",
@@ -923,41 +688,38 @@ elif menu == "👥 Khách hàng":
             "Nhu cầu",
             "Điểm",
             "Phân loại",
-            "Trạng thái"
+            "Trạng thái",
         ]
 
         st.dataframe(
-            display_df,
-            use_container_width=True,
-            hide_index=True
+            display_df, use_container_width=True, hide_index=True
         )
 
         st.divider()
 
-        st.markdown(
-            "### 👤 Xem hồ sơ khách hàng"
-        )
+        st.markdown("### 👤 Xem hồ sơ khách hàng")
 
-        customer_options = filtered[
-            "name"
-        ].tolist()
+        customer_options = filtered["name"].tolist()
 
         if customer_options:
+            selected_name = st.selectbox("Chọn khách hàng", customer_options)
 
-            selected_name = st.selectbox(
-                "Chọn khách hàng",
-                customer_options
-            )
-
-            selected = filtered[
-                filtered["name"]
-                == selected_name
-            ].iloc[0]
+            selected = filtered[filtered["name"] == selected_name].iloc[0]
 
             col1, col2 = st.columns([2, 1])
 
-            with col1:
+            inc_val = (
+                selected["income"] * 1_000_000
+                if selected["income"] < 1000
+                else selected["income"]
+            )
+            amt_val = (
+                selected["expected_amount"] * 1_000_000
+                if selected["expected_amount"] < 1000
+                else selected["expected_amount"]
+            )
 
+            with col1:
                 st.markdown(
                     f"""
                     <div class="card">
@@ -967,36 +729,29 @@ elif menu == "👥 Khách hàng":
                         <p>📧 {selected['email']}</p>
                         <p>📍 {selected['area']}</p>
                         <p>💼 {selected['occupation']}</p>
-                        <p>💰 Thu nhập: {selected['income']:,.0f} triệu/tháng</p>
+                        <p>💰 Thu nhập: {format_currency(inc_val)} VNĐ/tháng</p>
                         <p>💳 Quan tâm: {selected['product']}</p>
-                        <p>💵 Nhu cầu: {selected['expected_amount']:,.0f} triệu</p>
+                        <p>💵 Nhu cầu: {format_currency(amt_val)} VNĐ</p>
                         <p>📅 Thời gian: {selected['need_time']}</p>
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
             with col2:
-
                 st.markdown(
                     f"""
                     <div class="card">
-                        <div class="small-text">
-                            ĐIỂM TIỀM NĂNG
-                        </div>
-                        <div class="score">
-                            ⭐ {selected['score']}/100
-                        </div>
+                        <div class="small-text">ĐIỂM TIỀM NĂNG</div>
+                        <div class="score">⭐ {selected['score']}/100</div>
                         <br>
                         <b>{selected['classification']}</b>
                         <br><br>
-                        <div class="small-text">
-                            Trạng thái hiện tại
-                        </div>
+                        <div class="small-text">Trạng thái hiện tại</div>
                         <b>{selected['status']}</b>
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
                 new_status = st.selectbox(
@@ -1006,46 +761,25 @@ elif menu == "👥 Khách hàng":
                         "Đã liên hệ",
                         "Đang tư vấn",
                         "Tiềm năng",
-                        "Đã chuyển đổi"
+                        "Đã chuyển đổi",
                     ],
                     index=[
                         "Mới tiếp nhận",
                         "Đã liên hệ",
                         "Đang tư vấn",
                         "Tiềm năng",
-                        "Đã chuyển đổi"
-                    ].index(selected["status"])
+                        "Đã chuyển đổi",
+                    ].index(selected["status"]),
                 )
 
-                if st.button(
-                    "💾 Cập nhật",
-                    use_container_width=True
-                ):
-
-                    update_status(
-                        int(selected["id"]),
-                        new_status
-                    )
-
-                    st.success(
-                        "Đã cập nhật trạng thái!"
-                    )
-
+                if st.button("💾 Cập nhật", use_container_width=True):
+                    update_status(int(selected["id"]), new_status)
+                    st.success("Đã cập nhật trạng thái!")
                     st.rerun()
 
-                if st.button(
-                    "🗑️ Xóa khách hàng",
-                    use_container_width=True
-                ):
-
-                    delete_customer(
-                        int(selected["id"])
-                    )
-
-                    st.success(
-                        "Đã xóa khách hàng."
-                    )
-
+                if st.button("🗑️ Xóa khách hàng", use_container_width=True):
+                    delete_customer(int(selected["id"]))
+                    st.success("Đã xóa khách hàng.")
                     st.rerun()
 
 
@@ -1054,58 +788,43 @@ elif menu == "👥 Khách hàng":
 # =========================================================
 
 elif menu == "🎯 Pipeline":
-
     st.markdown(
         '<div class="section-title">🎯 Customer Pipeline</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     df = load_customers()
 
     if df.empty:
-
-        st.info(
-            "Chưa có dữ liệu khách hàng."
-        )
-
+        st.info("Chưa có dữ liệu khách hàng.")
     else:
-
         stages = [
             "Mới tiếp nhận",
             "Đã liên hệ",
             "Đang tư vấn",
             "Tiềm năng",
-            "Đã chuyển đổi"
+            "Đã chuyển đổi",
         ]
 
         cols = st.columns(5)
 
         for col, stage in zip(cols, stages):
-
-            stage_df = df[
-                df["status"] == stage
-            ]
+            stage_df = df[df["status"] == stage]
 
             with col:
-
                 st.markdown(
                     f"""
                     <div class="pipeline">
-                        <div class="small-text">
-                            {stage}
-                        </div>
-                        <div class="pipeline-number">
-                            {len(stage_df)}
-                        </div>
+                        <div class="small-text">{stage}</div>
+                        <div class="pipeline-number">{len(stage_df)}</div>
                     </div>
                     """,
-                    unsafe_allow_html=True
+                    unsafe_allow_html=True,
                 )
 
                 st.write("")
 
                 for _, row in stage_df.head(8).iterrows():
-
                     if row["classification"] == "HOT":
                         icon = "🔥"
                     elif row["classification"] == "WARM":
@@ -1118,14 +837,12 @@ elif menu == "🎯 Pipeline":
                         <div class="card">
                             <b>{icon} {row['name']}</b>
                             <br>
-                            <span class="small-text">
-                                {row['product']}
-                            </span>
+                            <span class="small-text">{row['product']}</span>
                             <br>
                             ⭐ {row['score']}/100
                         </div>
                         """,
-                        unsafe_allow_html=True
+                        unsafe_allow_html=True,
                     )
 
 
@@ -1134,92 +851,49 @@ elif menu == "🎯 Pipeline":
 # =========================================================
 
 elif menu == "📊 Phân tích":
-
     st.markdown(
         '<div class="section-title">📊 Phân tích dữ liệu</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     df = load_customers()
 
     if df.empty:
-
-        st.info(
-            "Chưa có dữ liệu để phân tích."
-        )
-
+        st.info("Chưa có dữ liệu để phân tích.")
     else:
-
         col1, col2 = st.columns(2)
 
         with col1:
-
-            st.subheader(
-                "🎯 Phân loại khách hàng"
-            )
-
-            classification_chart = (
-                df["classification"]
-                .value_counts()
-            )
-
-            st.bar_chart(
-                classification_chart
-            )
+            st.subheader("🎯 Phân loại khách hàng")
+            classification_chart = df["classification"].value_counts()
+            st.bar_chart(classification_chart)
 
         with col2:
-
-            st.subheader(
-                "💳 Sản phẩm được quan tâm"
-            )
-
-            product_chart = (
-                df["product"]
-                .value_counts()
-            )
-
-            st.bar_chart(
-                product_chart
-            )
+            st.subheader("💳 Sản phẩm được quan tâm")
+            product_chart = df["product"].value_counts()
+            st.bar_chart(product_chart)
 
         st.divider()
 
-        st.subheader(
-            "📌 Trạng thái Pipeline"
-        )
-
-        status_chart = (
-            df["status"]
-            .value_counts()
-        )
-
-        st.bar_chart(
-            status_chart
-        )
+        st.subheader("📌 Trạng thái Pipeline")
+        status_chart = df["status"].value_counts()
+        st.bar_chart(status_chart)
 
         st.divider()
 
         avg_score = df["score"].mean()
-
-        total_value = df[
-            "expected_amount"
-        ].sum()
+        total_value = df["expected_amount"].sum()
+        total_val_full = (
+            total_value * 1_000_000 if total_value < 1000000 else total_value
+        )
 
         c1, c2, c3 = st.columns(3)
 
-        c1.metric(
-            "⭐ Điểm tiềm năng TB",
-            f"{avg_score:.1f}/100"
-        )
-
-        c2.metric(
-            "💰 Tổng nhu cầu dự kiến",
-            f"{total_value:,.0f} triệu"
-        )
-
+        c1.metric("⭐ Điểm tiềm năng TB", f"{avg_score:.1f}/100")
+        c2.metric("💰 Tổng nhu cầu dự kiến", f"{format_currency(total_val_full)} VNĐ")
         c3.metric(
             "🔥 Tỷ lệ HOT",
-            f"{(len(df[df['classification']=='HOT']) / len(df) * 100):.1f}%"
+            f"{(len(df[df['classification']=='HOT']) / len(df) * 100):.1f}%",
         )
 
 
@@ -1228,43 +902,25 @@ elif menu == "📊 Phân tích":
 # =========================================================
 
 elif menu == "📞 Cần chăm sóc":
-
     st.markdown(
         '<div class="section-title">📞 Danh sách cần chăm sóc</div>',
-        unsafe_allow_html=True
+        unsafe_allow_html=True,
     )
 
     df = load_customers()
 
     if df.empty:
-
-        st.info(
-            "Chưa có khách hàng."
-        )
-
+        st.info("Chưa có khách hàng.")
     else:
-
         priority_df = df[
-            df["classification"].isin(
-                ["HOT", "WARM"]
-            )
-        ].sort_values(
-            "score",
-            ascending=False
-        )
+            df["classification"].isin(["HOT", "WARM"])
+        ].sort_values("score", ascending=False)
 
         if priority_df.empty:
-
-            st.success(
-                "🎉 Không có khách hàng cần ưu tiên."
-            )
-
+            st.success("🎉 Không có khách hàng cần ưu tiên.")
         else:
-
             for _, row in priority_df.iterrows():
-
                 if row["classification"] == "HOT":
-
                     st.markdown(
                         f"""
                         <div class="card hot-card">
@@ -1278,11 +934,9 @@ elif menu == "📞 Cần chăm sóc":
                             📌 {row['status']}
                         </div>
                         """,
-                        unsafe_allow_html=True
+                        unsafe_allow_html=True,
                     )
-
                 else:
-
                     st.markdown(
                         f"""
                         <div class="card warm-card">
@@ -1296,7 +950,7 @@ elif menu == "📞 Cần chăm sóc":
                             📌 {row['status']}
                         </div>
                         """,
-                        unsafe_allow_html=True
+                        unsafe_allow_html=True,
                     )
 
 
@@ -1309,24 +963,15 @@ st.sidebar.divider()
 df_export = load_customers()
 
 if not df_export.empty:
-
     output = BytesIO()
 
-    with pd.ExcelWriter(
-        output,
-        engine="openpyxl"
-    ) as writer:
-
-        df_export.to_excel(
-            writer,
-            index=False,
-            sheet_name="Khach_Hang"
-        )
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df_export.to_excel(writer, index=False, sheet_name="Khach_Hang")
 
     st.sidebar.download_button(
         "📥 Xuất dữ liệu Excel",
         data=output.getvalue(),
         file_name="Smart_Banking_CRM.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        use_container_width=True
+        use_container_width=True,
     )
