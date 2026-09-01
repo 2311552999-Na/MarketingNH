@@ -1,296 +1,61 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
+from datetime import datetime
 
+# Cấu hình trang
+st.set_page_config(page_title="App Lưu Thông Tin Khách Hàng", layout="centered")
 
-# ==========================================
-# CẤU HÌNH
-# ==========================================
+st.title("📋 App Lưu Thông Tin Khách Hàng Tiềm Năng")
 
-st.set_page_config(
-    page_title="Quản lý khách hàng",
-    page_icon="👤",
-    layout="wide"
-)
-st.image("logo.jpg")
+# Khởi tạo bộ nhớ tạm để lưu dữ liệu
+if "danh_sach" not in st.session_state:
+    st.session_state.danh_sach = []
 
-# ==========================================
-# KHỞI TẠO DANH SÁCH KHÁCH HÀNG
-# ==========================================
-
-if "customers" not in st.session_state:
-    st.session_state.customers = []
-
-
-# ==========================================
-# HÀM XUẤT EXCEL
-# ==========================================
-
-def export_excel():
-
-    df = pd.DataFrame(
-        st.session_state.customers
+# --- FORM NHẬP THÔNG TIN KHÁCH HÀNG ---
+with st.form("form_khach_hang", clear_on_submit=True):
+    st.subheader("Nhập thông tin khách hàng mới")
+    ho_ten = st.text_input("Họ và tên *")
+    sdt = st.text_input("Số điện thoại *")
+    email = st.text_input("Email")
+    san_pham = st.selectbox(
+        "Sản phẩm/Dịch vụ quan tâm", 
+        ["Thẻ tín dụng", "Vay tiêu dùng", "Gửi tiết kiệm", "Mở tài khoản thanh toán", "Vay mua nhà/xe"]
     )
+    ghi_chu = st.text_area("Ghi chú cuộc gọi / Nhu cầu chi tiết")
+    
+    btn_submit = st.form_submit_button("Lưu thông tin")
 
-    output = BytesIO()
-
-    with pd.ExcelWriter(
-        output,
-        engine="openpyxl"
-    ) as writer:
-
-        df.to_excel(
-            writer,
-            index=False,
-            sheet_name="Khách hàng"
-        )
-
-    return output.getvalue()
-
-
-# ==========================================
-# MENU
-# ==========================================
-
-st.sidebar.title("📋 MENU")
-
-page = st.sidebar.radio(
-    "Chọn trang",
-    [
-        "👤 Nhập khách hàng",
-        "🔐 Admin"
-    ]
-)
-
-
-# ==========================================
-# TRANG NHẬP KHÁCH HÀNG
-# ==========================================
-
-if page == "👤 Nhập khách hàng":
-
-    st.title("👤 THÔNG TIN KHÁCH HÀNG")
-
-    st.write(
-        "Vui lòng nhập thông tin khách hàng."
-    )
-
-    st.divider()
-
-
-    # --------------------------------------
-    # NHẬP THÔNG TIN
-    # --------------------------------------
-
-    phone = st.text_input(
-        "📱 Số điện thoại",
-        placeholder="Nhập số điện thoại"
-    )
-
-    name = st.text_input(
-        "👤 Tên khách hàng",
-        placeholder="Nhập tên khách hàng"
-    )
-
-    address = st.text_input(
-        "📍 Địa chỉ",
-        placeholder="Nhập địa chỉ"
-    )
-
-    note = st.text_area(
-        "📝 Ghi chú",
-        placeholder="Nhập ghi chú"
-    )
-
-
-    st.divider()
-
-
-    # --------------------------------------
-    # NÚT LƯU
-    # --------------------------------------
-
-    if st.button(
-        "💾 LƯU THÔNG TIN",
-        type="primary",
-        use_container_width=True
-    ):
-
-        if phone.strip() == "":
-
-            st.error(
-                "❌ Vui lòng nhập số điện thoại."
-            )
-
-        elif name.strip() == "":
-
-            st.error(
-                "❌ Vui lòng nhập tên khách hàng."
-            )
-
-        else:
-
-            # Tạo khách hàng mới
-
-            customer = {
-                "Số điện thoại": phone.strip(),
-                "Tên khách hàng": name.strip(),
-                "Địa chỉ": address.strip(),
-                "Ghi chú": note.strip()
-            }
-
-
-            # Lưu vào session
-
-            st.session_state.customers.append(
-                customer
-            )
-
-
-            st.success(
-                "✅ Đã lưu thông tin khách hàng!"
-)
-
-
-# ==========================================
-# TRANG ADMIN
-# ==========================================
-
-elif page == "🔐 Admin":
-
-    st.title("🔐 ADMIN")
-
-    st.divider()
-
-
-    # ======================================
-    # ĐĂNG NHẬP
-    # ======================================
-
-    if "admin_logged_in" not in st.session_state:
-
-        st.session_state.admin_logged_in = False
-
-
-    if not st.session_state.admin_logged_in:
-
-        password = st.text_input(
-            "🔑 Mật khẩu",
-            type="password"
-        )
-
-
-        if st.button(
-            "ĐĂNG NHẬP",
-            type="primary"
-        ):
-
-            if password == "123456":
-
-                st.session_state.admin_logged_in = True
-
-                st.rerun()
-
-            else:
-
-                st.error(
-                    "❌ Sai mật khẩu."
-                )
-
-
-    # ======================================
-    # ADMIN ĐÃ ĐĂNG NHẬP
-    # ======================================
-
+# Xử lý nút lưu
+if btn_submit:
+    if not ho_ten or not sdt:
+        st.error("Vui lòng điền Họ tên và Số điện thoại!")
     else:
+        st.session_state.danh_sach.append({
+            "Thời gian": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Họ tên": ho_ten,
+            "Số điện thoại": sdt,
+            "Email": email,
+            "Sản phẩm": san_pham,
+            "Ghi chú": ghi_chu
+        })
+        st.success(f"Đã lưu thành công khách hàng: {ho_ten}")
 
-        col1, col2 = st.columns(
-            [5, 1]
-        )
+# --- HIỂN THỊ DANH SÁCH & XUẤT FILE ---
+st.divider()
+st.subheader("📊 Danh sách khách hàng đã lưu")
 
-
-        with col1:
-
-            st.subheader(
-                "📊 DANH SÁCH KHÁCH HÀNG"
-            )
-
-
-        with col2:
-
-            if st.button("🚪 Đăng xuất"):
-
-                st.session_state.admin_logged_in = False
-
-                st.rerun()
-
-
-        st.divider()
-
-
-        # ==================================
-        # KIỂM TRA DỮ LIỆU
-        # ==================================
-
-        if len(st.session_state.customers) == 0:
-
-            st.info(
-                "📭 Chưa có khách hàng."
-            )
-
-
-        else:
-
-            # ==============================
-            # CHUYỂN SANG DATAFRAME
-            # ==============================
-
-            df = pd.DataFrame(
-                st.session_state.customers
-            )
-
-
-            # ==============================
-            # TỔNG KHÁCH HÀNG
-            # ==============================
-
-            st.metric(
-                "👥 Tổng số khách hàng",
-                len(df)
-            )
-
-
-            st.divider()
-
-
-            # ==============================
-            # HIỂN THỊ DANH SÁCH
-            # ==============================
-
-            st.dataframe(
-                df,
-                use_container_width=True,
-                hide_index=True
-            )
-
-
-            st.divider()
-
-
-            # ==============================
-            # XUẤT EXCEL
-            # ==============================
-
-            excel_file = export_excel()
-
-
-            st.download_button(
-                label="📥 XUẤT FILE EXCEL",
-                data=excel_file,
-                file_name="danh_sach_khach_hang.xlsx",
-                mime=(
-                    "application/vnd.openxmlformats-officedocument."
-                    "spreadsheetml.sheet"
-                ),
-                use_container_width=True
-            )
+if st.session_state.danh_sach:
+    df = pd.DataFrame(st.session_state.danh_sach)
+    st.dataframe(df, use_container_width=True, hide_index=True)
+    
+    # Nút xuất file Excel/CSV
+    csv = df.to_csv(index=False).encode('utf-8-sig')
+    st.download_button(
+        label="📥 XUẤT FILE EXCEL / CSV",
+        data=csv,
+        file_name="danh_sach_khach_hang.csv",
+        mime="text/csv",
+        use_container_width=True
+    )
+else:
+    st.info("Chưa có dữ liệu khách hàng nào.")
