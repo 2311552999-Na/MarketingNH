@@ -10,7 +10,7 @@ import streamlit as st
 # =========================================================
 
 st.set_page_config(
-    page_title="MB Bank Lead Manager",
+    page_title="Vietcombank Lead Manager",
     page_icon="🏦",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -18,14 +18,14 @@ st.set_page_config(
 
 
 # =========================================================
-# 2. GIAO DIỆN (CSS CUSTOM STYLES)
+# 2. GIAO DIỆN (CSS CUSTOM STYLES - VIETCOMBANK GREEN THEME)
 # =========================================================
 
 st.markdown(
     """
 <style>
 .main {
-    background-color: #f5f7fb;
+    background-color: #f4f7f5;
 }
 
 .block-container {
@@ -34,7 +34,7 @@ st.markdown(
 }
 
 [data-testid="stSidebar"] {
-    background: linear-gradient(180deg, #071b3a 0%, #0d2b5c 100%);
+    background: linear-gradient(180deg, #003319 0%, #005b2b 100%);
 }
 
 [data-testid="stSidebar"] * {
@@ -42,12 +42,12 @@ st.markdown(
 }
 
 .crm-header {
-    background: linear-gradient(135deg, #0b3d91, #1261c9);
+    background: linear-gradient(135deg, #005b2b, #1a7a40);
     padding: 28px 32px;
     border-radius: 18px;
     color: white;
     margin-bottom: 25px;
-    box-shadow: 0 8px 25px rgba(0, 60, 140, 0.15);
+    box-shadow: 0 8px 25px rgba(0, 91, 43, 0.2);
 }
 
 .crm-header h1 {
@@ -112,6 +112,7 @@ st.markdown(
 .pipeline-number {
     font-size: 28px;
     font-weight: 800;
+    color: #005b2b;
 }
 
 .badge-hot {
@@ -147,7 +148,7 @@ st.markdown(
 # 3. KẾT NỐI CƠ SỞ DỮ LIỆU SQLITE
 # =========================================================
 
-DB_NAME = "smart_banking_crm.db"
+DB_NAME = "vcb_crm.db"
 
 
 def get_connection():
@@ -198,7 +199,6 @@ init_database()
 
 def format_currency_vnd(amount):
     """Quy đổi tự động số tiền nhập vào (nếu nhỏ hơn 1.000.000 sẽ tự nhân 1.000.000)
-
     và định dạng bằng dấu chấm phân cách hàng nghìn chuẩn VNĐ.
     """
     if pd.isna(amount) or amount is None:
@@ -328,19 +328,18 @@ df = load_customers()
 # =========================================================
 
 with st.sidebar:
-    # URL Raw của logo trên GitHub repository của bạn
-    GITHUB_LOGO_URL = "https://raw.githubusercontent.com/2311552999-Na/MarketingNH/main/logo.jpg"
+    # URL Raw của logo Vietcombank
+    VCB_LOGO_URL = "https://raw.githubusercontent.com/2311552999-Na/MarketingNH/main/logo.jpg"
 
-    # Kiểm tra xem file logo.jpg có nằm ở thư mục cục bộ không, nếu không sẽ load từ link GitHub
     if os.path.exists("logo.jpg"):
         st.image("logo.jpg", use_container_width=True)
     else:
-        st.image(GITHUB_LOGO_URL, use_container_width=True)
+        st.image(VCB_LOGO_URL, use_container_width=True)
 
     st.markdown(
         """
         <div style="text-align:center; margin-top:-10px; margin-bottom:15px;">
-            <h2 style="margin:0;">MB BANK</h2>
+            <h2 style="margin:0;">VIETCOMBANK</h2>
             <p style="opacity:0.8; font-size:14px; margin:0;">Lead Manager</p>
         </div>
         """,
@@ -362,7 +361,7 @@ with st.sidebar:
     )
 
     st.divider()
-    st.caption("MB Bank Lead Manager\nPhiên bản 2.0 (Tự động tải Logo)")
+    st.caption("Vietcombank Lead Manager\nPhiên bản 2.0")
 
 
 # =========================================================
@@ -372,8 +371,8 @@ with st.sidebar:
 st.markdown(
     """
     <div class="crm-header">
-        <h1>🏦 MB BANK LEAD MANAGER</h1>
-        <p>Hệ thống quản lý và chăm sóc khách hàng tiềm năng Ngân hàng MB</p>
+        <h1>🏦 VIETCOMBANK LEAD MANAGER</h1>
+        <p>Hệ thống quản lý và chăm sóc khách hàng tiềm năng Ngân hàng Vietcombank</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -542,7 +541,7 @@ elif menu == "➕ Thêm khách hàng":
             score, classification = calculate_score(
                 income, product, amount, need_time
             )
-            code = "KH" + datetime.now().strftime("%y%m%d%H%M%S")
+            code = "VCB" + datetime.now().strftime("%y%m%d%H%M%S")
             created = datetime.now().strftime("%Y-%m-%d %H:%M")
 
             data = {
@@ -922,7 +921,7 @@ if not df_export.empty:
     st.sidebar.download_button(
         "📥 Xuất báo cáo Excel",
         data=output.getvalue(),
-        file_name="MB_Bank_Lead_Report.xlsx",
+        file_name="VCB_Lead_Report.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         use_container_width=True,
     )
